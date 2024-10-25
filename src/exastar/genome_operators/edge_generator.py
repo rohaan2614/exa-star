@@ -5,6 +5,9 @@ from typing import cast, List, Optional
 from config import configclass
 from exastar.genome import EXAStarGenome
 from exastar.genome.component import Node, Edge, RecurrentEdge
+from exastar.genome.component.dt_edge import DTEdge
+from exastar.genome.component.dt_node import DTNode
+from exastar.genome.component.dt_set_edge import DTBaseEdge
 
 from loguru import logger
 import numpy as np
@@ -28,8 +31,8 @@ class EdgeGenerator[G: EXAStarGenome](ABC):
     def __call__(
         self,
         target_genome: G,
-        input_node: Node,
-        output_node: Node,
+        input_node: DTNode,
+        output_node: DTNode,
         rng: np.random.Generator,
         recurrent: Optional[bool | int] = None,
         weight_generator: Optional[WeightGenerator] = None,
@@ -147,6 +150,43 @@ class RecurrentEdgeGenerator[G: EXAStarGenome](EdgeGenerator[G]):
 class RecurrentEdgeGeneratorConfig(EdgeGeneratorConfig):
     max_time_skip: int = field(default=10)
     p_recurrent: float = field(default=0.25)
+
+
+class DTEdgeGenerator[G: EXAStarGenome](EdgeGenerator[G]):
+    """
+    This is an edge generator for the EXA* algorithm. It will
+    generate feed forward edges for specifield nodes
+
+    """
+
+    def __init__(self):
+        """
+        Initializes an edge generator for EXA-GP.
+        """
+
+
+    def __call__(
+        self,
+        target_genome: G,
+        input_node: Node,
+        output_node: Node,
+        isLeft: bool,
+        rng: np.random.Generator,
+        weight_generator: Optional[WeightGenerator] = None,
+    ) -> DTEdge:
+
+        edge = DTBaseEdge(input_node, output_node, isLeft)
+
+        if weight_generator:
+            weight_generator(target_genome, rng, targets=[edge])
+            edge.set_weights_initialized(True)
+
+        return edge
+
+
+@configclass(name="base_dt_edge_generator", group="genome_factory/edge_generator", target=DTEdgeGenerator)
+class DTEdgeGeneratorConfig(EdgeGeneratorConfig):
+    ...
 
 
 class AltEdgeGenerator[G: EXAStarGenome](ABC):

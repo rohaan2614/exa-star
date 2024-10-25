@@ -5,7 +5,7 @@ from config import configclass
 from dataset import Dataset
 from genome import Genome, GenomeFactory
 from population.population import Population, PopulationConfig
-
+import dill
 from loguru import logger
 import numpy as np
 
@@ -44,7 +44,7 @@ class SimplePopulation[G: Genome, D: Dataset](Population[G, D]):
         """
         return [genome_factory.get_task(self, rng) for _ in range(self.size - self.n_elites)]
 
-    def integrate_generation(self, genomes: List[Optional[G]]) -> None:
+    def integrate_generation(self, genomes: List[Optional[G]], output_dir) -> None:
         """
         Discards all but the elite genomes and adds in the newly evaluated genomes. In the case of a duplicate genome,
         the one with worse fitness is discarded.
@@ -64,6 +64,10 @@ class SimplePopulation[G: Genome, D: Dataset](Population[G, D]):
                 if elites[index].fitness < g.fitness:
                     elites.pop(index)
                     new_genomes.append(g)
+                    #Saves best to file
+                    with open(f"{output_dir}/best/{g.generation_number}.genome", "wb") as file:
+                        dill.dump(g, file, recurse=True)
+
 
             except ValueError:
                 # thrown when `list.index(obj)` is called and obj is not in the list

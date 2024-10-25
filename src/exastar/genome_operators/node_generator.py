@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from config import configclass
 from exastar.genome import EXAStarGenome, Node
+from exastar.genome.component.dt_node import DTNode
 
 import numpy as np
 
@@ -48,7 +49,7 @@ class EXAStarNodeGenerator(NodeGenerator[EXAStarGenome]):
         """
         super().__init__()
 
-    def __call__(self, depth: float, target_genome: EXAStarGenome, rng: np.random.Generator) -> Node:
+    def __call__(self, depth: float, target_genome: EXAStarGenome, rng: np.random.Generator, parameter_name: str, sign: int) -> Node:
         """
         Creates a new recurrent node for an EXA-GP computational
         graph genome. It will select from all possible node types
@@ -62,7 +63,7 @@ class EXAStarNodeGenerator(NodeGenerator[EXAStarGenome]):
             A new node for an EXA-GP computational graph.
         """
 
-        new_node = Node(depth, target_genome.input_nodes[0].max_sequence_length)
+        new_node = DTNode(depth, parameter_name=parameter_name, sign=sign)
 
         return new_node
 

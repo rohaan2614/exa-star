@@ -1,10 +1,13 @@
 from typing import Dict, Tuple
 
+import numpy as np
+from dataclasses import dataclass, field
 from config import configclass
 from genome import Fitness, FitnessConfig, FitnessValue, MSEValue
 from exastar.genome.exastar_genome import EXAStarGenome
 from exastar.time_series import TimeSeries
 
+import numpy
 import torch
 
 
@@ -34,6 +37,29 @@ class EXAStarMSE(EXAStarTimeSeriesRegressionFitness[EXAStarGenome]):
         return value
 
 
-@ configclass(name="base_exastar_mse", group="fitness", target=EXAStarMSE)
+@configclass(name="base_exastar_mse", group="fitness", target=EXAStarMSE)
 class EXAStarMSEConfig(EXAStarFitnessConfig):
+    ...
+
+
+class EXAStarDT(EXAStarTimeSeriesRegressionFitness[EXAStarGenome]):
+    """
+    Computes the fitness for a Decision Tree stock market predictions
+    """
+    def __init__(self) -> None:
+        super().__init__()
+
+    def compute(self, genome: EXAStarGenome, dataset: TimeSeries) -> MSEValue[EXAStarGenome]:
+        days = 15  # How many days
+        iter = 20  # How many times to improve
+        value = MSEValue(
+            genome.train_genome(dataset, torch.optim.Adam(genome.parameters()), days, iter)
+        )
+        return value
+
+
+@configclass(name="base_exastar_dt", group="fitness", target=EXAStarDT)
+class EXAStarDTConfig(EXAStarFitnessConfig):
+    # days: int = field(default=10)
+    # iter: int = field(default=20)
     ...

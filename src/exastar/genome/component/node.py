@@ -59,7 +59,6 @@ class Node(ComparableMixin, Component):
 
         self.input_edges: List[Edge] = []
         self.output_edges: List[Edge] = []
-
         self.inputs_fired: np.ndarray = np.ndarray(shape=(max_sequence_length,), dtype=np.int32)
 
         self.value: List[torch.Tensor] = self._create_value()

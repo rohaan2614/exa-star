@@ -179,11 +179,12 @@ class SynchronousMPStrategy[G: Genome, D: Dataset](ParallelMPStrategy[G, D]):
     def f(fitness, task, i, output_dir) -> None:
         genome = task(ParallelMPStrategy.get_rng())
 
-        with open(f"{output_dir}/{i}.genome", "wb") as file:
-            dill.dump(genome, file)
-
         if genome:
             genome.evaluate(fitness, EvolutionaryStrategy.get_dataset())
+
+        with open(f"{output_dir}/{i+1}.genome", "wb") as file:
+            dill.dump(genome, file, recurse=True)
+        file.close()
 
         return genome
 
@@ -198,7 +199,7 @@ class SynchronousMPStrategy[G: Genome, D: Dataset](ParallelMPStrategy[G, D]):
             list(zip(cycle([self.fitness]), tasks, range(self.counter,
                      self.counter + len(tasks)), cycle([self.output_directory])))
         )
-        self.population.integrate_generation(genomes)
+        self.population.integrate_generation(genomes, self.output_directory)
         self.counter += len(genomes)
         logger.info("step complete...")
 

@@ -6,7 +6,11 @@ import copy
 import itertools
 from typing import Any, Callable, cast, Dict, List, Optional, Self, Set, Tuple
 
-from exastar.genome.component import Edge, edge_inon_t, Node, node_inon_t, InputNode, OutputNode
+from exastar.genome.component import edge_inon_t, node_inon_t
+from exastar.genome.component.dt_set_edge import DTBaseEdge
+from exastar.genome.component.dt_node import DTNode
+from exastar.genome.component.dt_input_node import DTInputNode
+from exastar.genome.component.dt_output_node import DTOutputNode
 from exastar.genome.component.component import Component
 from genome import Genome, FitnessValue
 from exastar.time_series import TimeSeries
@@ -23,7 +27,7 @@ import numpy as np
 import torch
 
 
-class EXAStarGenome[E: Edge](ComparableMixin, Genome, torch.nn.Module):
+class EXAStarGenome[E: DTBaseEdge](ComparableMixin, Genome, torch.nn.Module):
     """
     # Overview
     The EXAStarGenome emulates an EXAMM Genome. A neural network is represented as a set of input nodes and output
@@ -55,9 +59,9 @@ class EXAStarGenome[E: Edge](ComparableMixin, Genome, torch.nn.Module):
     def __init__(
         self,
         generation_number: int,
-        input_nodes: List[InputNode],
-        output_nodes: List[OutputNode],
-        nodes: List[Node],
+        input_nodes: List[DTInputNode],
+        output_nodes: List[DTOutputNode],
+        nodes: List[DTNode],
         edges: List[E],
         fitness: FitnessValue,
     ) -> None:
@@ -74,17 +78,17 @@ class EXAStarGenome[E: Edge](ComparableMixin, Genome, torch.nn.Module):
         # setattr(self, "constructing", True)
         self.generation_number: int = generation_number
 
-        self.input_nodes: List[InputNode] = sorted(input_nodes)
-        self.inon_to_input_node: Dict[node_inon_t, InputNode] = {n.inon: n for n in self.input_nodes}
+        self.input_nodes: List[DTInputNode] = sorted(input_nodes)
+        self.inon_to_input_node: Dict[node_inon_t, DTInputNode] = {n.inon: n for n in self.input_nodes}
 
-        self.output_nodes: List[OutputNode] = sorted(output_nodes)
-        self.inon_to_output_node: Dict[node_inon_t, OutputNode] = {n.inon: n for n in self.output_nodes}
+        self.output_nodes: List[DTOutputNode] = sorted(output_nodes)
+        self.inon_to_output_node: Dict[node_inon_t, DTOutputNode] = {n.inon: n for n in self.output_nodes}
 
-        self.nodes: List[Node] = sorted(nodes)
-        self.inon_to_node: Dict[node_inon_t, Node] = {n.inon: n for n in self.nodes}
+        self.nodes: List[DTNode] = sorted(nodes)
+        self.inon_to_node: Dict[node_inon_t, DTNode] = {n.inon: n for n in self.nodes}
 
         self.edges: List[E] = sorted(edges)
-        self.inon_to_edge: Dict[edge_inon_t, Edge] = {e.inon: e for e in self.edges}
+        self.inon_to_edge: Dict[edge_inon_t, DTBaseEdge] = {e.inon: e for e in self.edges}
 
         # Shadows `self.edges` but we need to do this for the `torch.nn.Module` interface to pick up on these.
         self.torch_modules: torch.nn.ModuleList = torch.nn.ModuleList(edges + nodes)
@@ -97,11 +101,11 @@ class EXAStarGenome[E: Edge](ComparableMixin, Genome, torch.nn.Module):
         return self.fitness._cmpkey()
 
     def _validate(self):
-        assert (cast(Set[Node], set(self.input_nodes)) - set(self.nodes)) == set()
-        assert set(filter(lambda x: isinstance(x, InputNode), self.nodes)) == set(self.input_nodes)
+        assert (cast(Set[DTNode], set(self.input_nodes)) - set(self.nodes)) == set()
+        assert set(filter(lambda x: isinstance(x, DTInputNode), self.nodes)) == set(self.input_nodes)
 
-        assert (cast(Set[Node], set(self.output_nodes)) - set(self.nodes)) == set()
-        assert set(filter(lambda x: isinstance(x, OutputNode), self.nodes)) == set(self.output_nodes)
+        assert (cast(Set[DTNode], set(self.output_nodes)) - set(self.nodes)) == set()
+        assert set(filter(lambda x: isinstance(x, DTOutputNode), self.nodes)) == set(self.output_nodes)
 
     def __hash__(self) -> int:
         """"""
@@ -161,7 +165,7 @@ class EXAStarGenome[E: Edge](ComparableMixin, Genome, torch.nn.Module):
     @overrides(LogDataProvider[None])
     def get_log_data(self, aggregator: None) -> Dict[str, Any]: ...
 
-    def add_node(self, node: Node) -> None:
+    def add_node(self, node: DTNode) -> None:
         """
         Adds an non-input and non-output node when creating this genome
         Args:
@@ -173,14 +177,14 @@ class EXAStarGenome[E: Edge](ComparableMixin, Genome, torch.nn.Module):
         self.inon_to_node[node.inon] = node
         self.torch_modules.append(node)
 
-        if isinstance(node, InputNode):
+        if isinstance(node, DTInputNode):
             bisect.insort(self.input_nodes, node)
             self.inon_to_input_node[node.inon] = node
-        elif isinstance(node, OutputNode):
+        elif isinstance(node, DTOutputNode):
             bisect.insort(self.output_nodes, node)
             self.inon_to_output_node[node.inon] = node
 
-    def add_node_during_crossover(self, node: Node):
+    def add_node_during_crossover(self, node: DTNode):
         """
         Adds a non-input, non-output node to the genome
         during the crossover operation. This will later have
@@ -188,8 +192,8 @@ class EXAStarGenome[E: Edge](ComparableMixin, Genome, torch.nn.Module):
         Args:
             node: is the node to add to the computational graph
         """
-        assert not isinstance(node, InputNode)
-        assert not isinstance(node, OutputNode)
+        assert not isinstance(node, DTInputNode)
+        assert not isinstance(node, DTOutputNode)
         assert len(node.input_edges) == 0
         assert len(node.output_edges) == 0
 

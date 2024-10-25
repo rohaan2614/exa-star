@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, cast
 
 from config import configclass
-from exastar.genome.component import Node
+from exastar.genome.component.dt_node import DTNode
 from exastar.genome import EXAStarGenome
 
 from loguru import logger
@@ -11,7 +11,7 @@ import numpy as np
 import torch
 
 from exastar.genome.component.component import Component
-from exastar.genome.component.edge import Edge
+from exastar.genome.component.dt_set_edge import DTBaseEdge
 from exastar.genome.visitor import WeightDistributionVisitor
 
 
@@ -47,11 +47,15 @@ class WeightGenerator[G: EXAStarGenome](ABC):
             if component.weights_initialized():
                 continue
 
-            if isinstance(component, Edge):
-                fan_in, fan_out = len(component.input_node.output_edges), len(component.output_node.input_edges)
+            if isinstance(component, DTBaseEdge):
+                # fan_in, fan_out = len(component.input_node.output_edge), len(component.output_node.input_edge)
+                # Set to ints until a better way to count
+                fan_in, fan_out = 2, 1
             else:
-                assert isinstance(component, Node)
-                fan_in, fan_out = len(component.input_edges), len(component.output_edges)
+                assert isinstance(component, DTNode)
+                # fan_in, fan_out = len(component.input_edges), len(component.output_edges)
+                # Set to ints until a better way to count
+                fan_in, fan_out = 1,2
 
             for parameter in component.parameters():
                 self.generate(parameter, fan_in, fan_out, rng)
@@ -60,8 +64,8 @@ class WeightGenerator[G: EXAStarGenome](ABC):
 
     def _initialize_genome(self, genome: G, rng: np.random.Generator) -> None:
         for node in genome.nodes:
-            fan_in = len(node.input_edges)
-            fan_out = len(node.output_edges)
+            fan_in = 0
+            fan_out = 0
 
             if not node.weights_initialized():
                 for parameter in node.parameters():
@@ -69,11 +73,11 @@ class WeightGenerator[G: EXAStarGenome](ABC):
 
                 node.set_weights_initialized(True)
 
-            for edge in node.input_edges:
+            if node.input_edge:
+                edge = node.input_edge
                 if not edge.weights_initialized():
                     for parameter in edge.parameters():
                         self.generate(parameter, fan_in, fan_out, rng)
-
                     edge.set_weights_initialized(True)
 
     @abstractmethod

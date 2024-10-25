@@ -4,7 +4,7 @@ from dataclasses import field
 from config import configclass
 from exastar.genome.exastar_genome import EXAStarGenome
 from exastar.genome.seed import SeedGenomeFactory, SeedGenomeFactoryConfig
-from exastar.genome_operators.edge_generator import EdgeGenerator, EdgeGeneratorConfig, RecurrentEdgeGeneratorConfig
+from exastar.genome_operators.edge_generator import EdgeGenerator, EdgeGeneratorConfig, DTEdgeGeneratorConfig, RecurrentEdgeGeneratorConfig
 from exastar.genome_operators.node_generator import EXAStarNodeGenerator, EXAStarNodeGeneratorConfig, NodeGenerator, NodeGeneratorConfig
 from exastar.time_series import TimeSeries
 from exastar.weights import LamarckianWeightGeneratorConfig, WeightGenerator, WeightGeneratorConfig
@@ -68,5 +68,5 @@ class EXAStarGenomeFactoryConfig(GenomeFactoryConfig):
     """
     seed_genome_factory: SeedGenomeFactoryConfig
     node_generator: NodeGeneratorConfig = field(default_factory=EXAStarNodeGeneratorConfig)
-    edge_generator: EdgeGeneratorConfig = field(default_factory=RecurrentEdgeGeneratorConfig)
+    edge_generator: EdgeGeneratorConfig = field(default_factory=DTEdgeGeneratorConfig)
     weight_generator: WeightGeneratorConfig = field(default_factory=LamarckianWeightGeneratorConfig)

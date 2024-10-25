@@ -1,20 +1,19 @@
 from typing import Optional
 import bisect
-from exastar.genome.component.node import Node, node_inon_t
-from exastar.genome.component.edge import Edge
+from exastar.genome.component.dt_node import DTNode, node_inon_t
+from exastar.genome.component.dt_set_edge import DTBaseEdge
 from util.typing import overrides
+import torch
 
-
-class InputNode(Node):
+class DTInputNode(DTNode):
     """
     An input node is like a regular node, except it has an input parameter name.
     """
 
     def __init__(
         self,
-        parameter_name: str,
+        node_name: str,
         depth: float,
-        max_sequence_length: int,
         inon: Optional[node_inon_t] = None,
         enabled: bool = True,
         active: bool = True,
@@ -24,25 +23,34 @@ class InputNode(Node):
         Creates an input node of a computational graph.
 
         Args:
-            parameter_name: is the input parameter name (e.g., time series sequence name).
+            node_name: is the input parameter name.
 
             See `exastar.genome.component.Node` for details on `depth`, `max_sequence_length`, and `inon`.
             See `exastar.genome.component.Component` for details on `enabled`, `active`, and `weights_initialized`.
         """
-        super().__init__(depth, max_sequence_length, inon, enabled, active, weights_initialized)
+        super().__init__(depth, None, None, inon, enabled, active, weights_initialized)
 
-        self.parameter_name: str = parameter_name
+        self.node_name: str = node_name
 
-    @overrides(Node)
+    @overrides(DTNode)
     def __repr__(self) -> str:
         """
         Provides a unique string representation for this input node.
         """
         return (
             "InputNode("
-            f"parameter='{self.parameter_name}', "
+            f"parameter='{self.node_name}', "
             f"depth={self.depth}, "
-            f"max_sequence_length={self.max_sequence_length}, "
             f"inon={self.inon}, "
             f"enabled={self.enabled})"
         )
+
+    @overrides(DTNode)
+    def forward(self):
+        """
+        Propagates an input node's value forward, only heads left at start.
+        """
+        if self.left_output_edge.enabled:
+            self.left_output_edge.forward(value=torch.ones(1))
+
+

@@ -93,8 +93,9 @@ class GraphVizVisitor[G: EXAStarGenome](Visitor[G, graphviz.Digraph]):
                 label=f"skip {edge.time_skip}",
             )
 
+
     def visit_node(self, node: Node) -> None:
         self.dot.node(f"node {node.inon}")
 
     def visit_io_node(self, target_graph, input_node: InputNode | OutputNode) -> None:
-        target_graph.node(f"node {input_node.inon}", label=input_node.parameter_name)
+        target_graph.node(f"node {input_node.inon}", label=input_node.node_name)

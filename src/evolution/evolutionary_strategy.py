@@ -13,7 +13,6 @@ import numpy as np
 from pandas import DataFrame
 from pandas._typing import Axes
 
-
 class EvolutionaryStrategy[G: Genome, D: Dataset](ABC, LogDataAggregator):
     """
     Abstract class representing an evolutionary algorithm.
