@@ -1,10 +1,15 @@
 from typing import Optional
 
+from exastar.genome.component.output_node import OutputNode
 from exastar.genome.component.dt_node import DTNode, node_inon_t
-from util.typing import overrides
+from exastar.genome.component.dt_set_edge import DTBaseEdge, edge_inon_t
+from util.typing import overrides, ComparableMixin
 
+from typing import List, Optional, TYPE_CHECKING, Tuple
 
-class DTOutputNode(DTNode):
+import torch
+
+class DTOutputNode(OutputNode):
     def __init__(
         self,
         node_name: str,
@@ -23,19 +28,40 @@ class DTOutputNode(DTNode):
             See `exastar.genome.component.Node` for details on `depth`, `max_sequence_length`, and `inon`.
             See `exastar.genome.component.Component` for details on `enabled`, `active`, and `weights_initialized`.
         """
-        super().__init__(depth, None, None, inon, enabled, active, weights_initialized)
-
+        super().__init__(node_name, depth, 0, inon, enabled, active, weights_initialized)
+        self.input_edge: DTBaseEdge = None
         self.node_name: str = node_name
 
-    @overrides(DTNode)
-    def __repr__(self) -> str:
+    @overrides(OutputNode)
+    def input_fired(self, value: torch.Tensor):
+        self.value = value
+        self.inputs_fired = 1
+
+    @overrides(OutputNode)
+    def _create_value(self) -> List[torch.Tensor]:
         """
-        Provides a unique string representation for this output node.
+        A series of 0s for the empty state of `self.value`.
         """
-        return (
-            "OutputNode("
-            f"parameter='{self.node_name}', "
-            f"depth={self.depth}, "
-            f"inon={self.inon}, "
-            f"enabled={self.enabled})"
-        )
+        return torch.zeros(1)
+
+    @overrides(OutputNode)
+    def add_input_edge(self, edge: DTBaseEdge):
+        """
+        Adds an input edge to this node.
+
+        Args:
+            edge: a new input edge for this node.
+        """
+        super().add_input_edge(edge)
+        assert edge.output_node.inon == self.inon
+        if self.input_edge:
+            self.input_edges = []
+        self.input_edge = edge
+
+    @overrides(OutputNode)
+    def reset(self):
+        """
+        Resets the parameters and values of this node for the next forward and backward pass.
+        """
+        self.inputs_fired = 0
+        self.value = torch.zeros(1)

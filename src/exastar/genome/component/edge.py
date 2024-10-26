@@ -87,7 +87,24 @@ class Edge(ComparableMixin, Component):
         effectively flattens the pickled representation.
         """
         super().__setstate__(state)
+        self.input_node = state["input_node"]
         self._connect()
+
+    def __getstate__(self):
+        """
+        Overrides the default implementation of object.__getstate__ because we are unable to pickle
+        large networks if we include input and outptut edges. Instead, we will rely on the construction of
+        new edges to add the appropriate input and output edges. See exastar.genome.component.Edge.__setstate__
+        to see how this is done.
+
+        `self.value` is not copied, meaining resumable training will not work.
+
+        Returns:
+            state dictionary sans the input and output edges
+        """
+        state: dict = dict(self.__dict__)
+
+        return state
 
     def __deepcopy__(self, memo):
         """

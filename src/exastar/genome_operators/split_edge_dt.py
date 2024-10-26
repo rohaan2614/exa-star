@@ -55,17 +55,11 @@ class DTSplitEdge[G: EXAStarGenome](EXAStarMutationOperator[G]):
             child_depth = rng.uniform(low=math.nextafter(min_depth, max_depth), high=max_depth)
 
         new_node = self.node_generator(child_depth, genome, rng, rng.choice(genome.options, 1), rng.integers(0, 2))
-
         genome.add_node(new_node)
 
         # TODO: Should we randomly generate new edges rather than copying the parameters of the split edge?
 
-        # Did above
-        if target_edge.isLeft:
-            input_edge = self.edge_generator(genome, input_node, new_node, True, rng)
-        else:
-            input_edge = self.edge_generator(genome, input_node, new_node, False, rng)
-
+        input_edge = self.edge_generator(genome, input_node, new_node, target_edge.isLeft, rng)
         genome.add_edge(input_edge)
 
         l_output_edge = self.edge_generator(genome, new_node, output_node, True, rng)
@@ -87,7 +81,7 @@ class DTSplitEdge[G: EXAStarGenome](EXAStarMutationOperator[G]):
 
         genome.add_edge(r_output_edge)
 
-        self.weight_generator(genome, rng, targets=[target_edge, l_output_edge, r_output_edge])
+        self.weight_generator(genome, rng, targets=[new_node, input_edge, l_output_edge, r_output_edge])
         # self.weight_generator(genome, rng, targets=[new_node, target_edge, l_output_edge, r_output_edge])
 
         return genome

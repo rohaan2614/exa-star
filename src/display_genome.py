@@ -44,10 +44,10 @@ def run_sim(inital_series):
 
 
 
-# with open('./output/test/2801.genome', 'rb') as file:
-#     loaded_data = dill.load(file)
-with open('./output/test/best/484.genome', 'rb') as file:
+with open('./output/test/3.genome', 'rb') as file:
     loaded_data = dill.load(file)
+# with open('./output/test/best/484.genome', 'rb') as file:
+#     loaded_data = dill.load(file)
     # Use the loaded lambda function
     graph = graphviz_visitor_dt.GraphVizVisitorDT("src", "test", loaded_data)
     test = graph.visit()

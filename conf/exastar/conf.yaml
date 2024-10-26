@@ -5,8 +5,12 @@ defaults:
   - genome_factory/seed_genome_factory: base_trivial_dt_seed_genome_factory
 #  - genome_factory/crossover_operators@genome_factory.crossover_operators.crossover: base_exastar_dt_crossover
   - genome_factory/mutation_operators@genome_factory.mutation_operators.clone: base_clone_mutation
-  - genome_factory/mutation_operators@genome_factory.mutation_operators.merge_node: base_merge_dt_node_mutation
+#  - genome_factory/mutation_operators@genome_factory.mutation_operators.merge_node: base_merge_dt_node_mutation
   - genome_factory/mutation_operators@genome_factory.mutation_operators.split_edge: base_split_dt_edge_mutation
+  - genome_factory/node_generator: base_exagp_dt_node_generator
+  - genome_factory/edge_generator: base_dt_edge_generator
+
+
 #  - genome_factory/mutation_operators@genome_factory.mutation_operators.add_node: base_mutate_nodes_mutation
 
 #  - genome_factory/mutation_operators@genome_factory.mutation_operators.split_node: base_split_node_mutation

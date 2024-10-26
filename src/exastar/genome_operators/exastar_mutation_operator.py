@@ -35,6 +35,7 @@ class EXAStarMutationOperator[G: EXAStarGenome](MutationOperator[G]):
 
 @dataclass
 class EXAStarMutationOperatorConfig(MutationOperatorConfig):
-    node_generator: NodeGeneratorConfig = field(default="${genome_factory.node_generator}")  # type: ignore
+    node_generator: NodeGeneratorConfig = field(default="${genome_factory.node_generator}")
+    # node_generator: NodeGeneratorConfig = field(default="${genome_factory.node_generator}")  # type: ignore
     edge_generator: EdgeGeneratorConfig = field(default="${genome_factory.edge_generator}")  # type: ignore
     weight_generator: WeightGeneratorConfig = field(default="${genome_factory.weight_generator}")  # type: ignore

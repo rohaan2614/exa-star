@@ -173,7 +173,7 @@ class DTEdgeGenerator[G: EXAStarGenome](EdgeGenerator[G]):
         isLeft: bool,
         rng: np.random.Generator,
         weight_generator: Optional[WeightGenerator] = None,
-    ) -> DTEdge:
+    ) -> DTBaseEdge:
 
         edge = DTBaseEdge(input_node, output_node, isLeft)
 
