@@ -28,12 +28,12 @@ class DTGenome(EXAStarGenome[DTBaseEdge]):
 
     @staticmethod
     def make_trivial(
-        generation_number: int,
-        input_series_names: List[str],
-        output_series_names: List[str],
-        weight_generator: WeightGenerator,
-        rng: np.random.Generator,
-        guide = None,
+            generation_number: int,
+            input_series_names: List[str],
+            output_series_names: List[str],
+            weight_generator: WeightGenerator,
+            rng: np.random.Generator,
+            guide=None,
     ) -> DTGenome:
         input_nodes = {
             "Start": DTInputNode("Start", 0.0)
@@ -46,9 +46,8 @@ class DTGenome(EXAStarGenome[DTBaseEdge]):
             output_nodes["S_" + output_name] = DTOutputNode("S_" + output_name, 1.0)
             output_nodes["H_" + output_name] = DTOutputNode("H_" + output_name, 1.0)
 
-
         edges: List[DTBaseEdge] = [
-            DTBaseEdge(input_nodes["Start"], output_nodes["B_"+output_series_names[0]], True)
+            DTBaseEdge(input_nodes["Start"], output_nodes["B_" + output_series_names[0]], True)
         ]
 
         nodes: List[DTNode] = list(chain(input_nodes.values(), output_nodes.values()))
@@ -69,15 +68,15 @@ class DTGenome(EXAStarGenome[DTBaseEdge]):
         return g
 
     def __init__(
-        self,
-        generation_number: int,
-        input_nodes: List[DTInputNode],
-        output_nodes: List[DTOutputNode],
-        nodes: List[DTNode],
-        edges: List[DTBaseEdge],
-        fitness: FitnessValue,
-        options: List[str],
-        guide,
+            self,
+            generation_number: int,
+            input_nodes: List[DTInputNode],
+            output_nodes: List[DTOutputNode],
+            nodes: List[DTNode],
+            edges: List[DTBaseEdge],
+            fitness: FitnessValue,
+            options: List[str],
+            guide,
     ) -> None:
         """
         Initialize base class genome fields and methods.
@@ -159,11 +158,12 @@ class DTGenome(EXAStarGenome[DTBaseEdge]):
 
     @overrides(EXAStarGenome)
     def train_genome(
-        self,
-        dataset: TimeSeries,
-        optimizer: torch.optim.Optimizer,
-        batch_size : int,
-        iterations: int,
+            self,
+            dataset: TimeSeries,
+            optimizer: torch.optim.Optimizer,
+            batch_size: int,
+            iterations: int,
+            full: bool = False,
     ) -> float:
         """
         One round of buying and selling to determine success. Will buy and sell a given percentage of values in stocks.
@@ -173,52 +173,183 @@ class DTGenome(EXAStarGenome[DTBaseEdge]):
             optimizer: torch.optimizer for loss
             batch_size: desired size of days for buying and selling
             iterations: How many run through to improve the current batch.
+            full: Decide to ignore batch size and train on full set
+        """
+        if full:
+            input_series = dataset.get_inputs(dataset.input_series_names, 0)
+            output_series = dataset.get_outputs_no_offset(dataset.output_series_names)
+            for iteration in range(iterations + 1):
+                loss = self.eval_iter_daily(input_series, output_series)
+                if iteration < iterations:
+                    loss.backward()
+                    optimizer.step()
+                    optimizer.zero_grad()
+                else:
+                    loss = float(loss)
+            logger.info(f"final fitness (loss): {loss}, type: {type(loss)}, gen:{self.generation_number}")
+            return loss
+        else:
+            avg = 0
+            for i in range(5):
+                for iteration in range(iterations + 1):
+                    if not full:
+                        rand = np.random.randint(0, len(dataset) - batch_size)
+                        input_series = dataset.get_batch_inputs(dataset.input_series_names, rand, batch_size)
+                        output_series = dataset.get_batch_outputs(dataset.output_series_names, rand, batch_size)
+                    else:
+                        input_series = dataset.get_inputs(dataset.input_series_names, 0)
+                        output_series = dataset.get_outputs_no_offset(dataset.output_series_names)
+
+                    loss = self.eval_iter_daily(input_series, output_series)
+                    if iteration < iterations:
+                        loss.backward()
+                        optimizer.step()
+                        optimizer.zero_grad()
+                    else:
+                        loss = float(loss)
+                        avg += loss
+            avg = avg / 5
+            logger.info(f"final fitness (loss): {avg}, type: {type(avg)}, gen:{self.generation_number}")
+            return avg
+
+    def test_genome(
+            self,
+            dataset: TimeSeries,
+            full: bool = False,
+    ) -> float:
+        """
+        One round of buying and selling to determine success. Will buy and sell a given percentage of values in stocks.
+
+        Args:
+            dataset: Dataset for training
+            full: should the whole time be evaluated or a section
+        """
+        if full:
+            input_series = dataset.get_batch_inputs(dataset.input_series_names, 0, 10)
+            output_series = dataset.get_batch_outputs(dataset.output_series_names,0, 10)
+        else:
+            input_series = dataset.get_inputs(dataset.input_series_names, 0)
+            output_series = dataset.get_outputs_no_offset(dataset.output_series_names)
+
+        loss = self.eval_iter(input_series, output_series)
+
+        return loss
+
+    def test_genome_daily(
+            self,
+            dataset: TimeSeries,
+    ) -> float:
+        """
+        Evaluate Genomes based on a day to day change, buying then selling the next day, or selling and buying the next day
+
+        Args:
+            dataset: Dataset for training
         """
 
-        for iteration in range(iterations + 1):
-            rand = np.random.randint(0, len(dataset) - batch_size)
-            input_series = dataset.get_batch_inputs(dataset.input_series_names, rand, batch_size)
-            output_series = dataset.get_batch_outputs(dataset.output_series_names, rand, batch_size)
+        input_series = dataset.get_inputs(dataset.input_series_names, 0)
+        output_series = dataset.get_outputs_no_offset(dataset.output_series_names)
 
-            val = torch.tensor(1000.0, requires_grad=True)  # Set requires_grad=True
-            held_shares = torch.tensor(0.0, requires_grad=True)
-            for i in range(len(input_series)):
-                self.reset()
-                outputs = self.forward(input_series, i)
+        val = 0
+        b_error = 0
+        s_error = 0
+        print(len(input_series))
+        for i in range(len(input_series)-1):
+            self.reset()
+            outputs = self.forward(input_series, i)
+            for parameter_name, value in outputs.items():
+                if value < 0:
+                    print("What")
+                price = output_series.series_dictionary[parameter_name[2:]][i]
+                next_p = output_series.series_dictionary[parameter_name[2:]][i + 1]
+                shift = (next_p - price)
+                if parameter_name[0] == "B" and value > 0:
+                    # val += (shift * value)
+                    val += shift
+                    if shift < 0 and value != 0:
+                        b_error += 1
+                elif parameter_name[0] == "S" and value > 0:
+                    # val -= (shift * value)
+                    val -= shift
+                    if shift > 0 and value != 0:
+                        s_error += 1
+        return val, b_error, s_error
 
-                for parameter_name, value in outputs.items():
-                    if value > 0:
-                        if parameter_name[0] == "B":
+    def eval_iter_daily(self, input_series: TimeSeries, output_series: TimeSeries):
+        """
+            One round of buying and selling to determine success. Will buy and sell a given percentage of values in stocks.
+
+            Args:
+                input_series: Input series used to pass forward in nodes
+                output_series: Output series used to provide parameter information
+        """
+        val = torch.tensor(0.0, requires_grad=True)
+        for i in range(len(input_series) - 1):
+            self.reset()
+            outputs = self.forward(input_series, i)
+            for parameter_name, value in outputs.items():
+                price = output_series.series_dictionary[parameter_name[2:]][i]
+                next_p = output_series.series_dictionary[parameter_name[2:]][i + 1]
+                if parameter_name[0] == "B" and value > 0:
+                    # val = val + ((next_p - price) * value)
+                    val = val + (next_p - price)
+                elif parameter_name[0] == "S" and value > 0:
+                    # val = val - ((next_p - price) * value)
+                    val = val - (next_p - price)
+
+
+        if val <= 1:
+            loss = -1 * val + 100
+        else:
+            loss = 100 / val
+
+        return loss
+
+    def eval_iter(self, input_series: TimeSeries, output_series: TimeSeries):
+        """
+                One round of buying and selling to determine success. Will buy and sell a given percentage of values in stocks.
+
+                Args:
+                    input_series: Input series used to pass forward in nodes
+                    output_series: Output series used to provide parameter information
+                """
+        val = torch.tensor(1000.0, requires_grad=True)  # Set requires_grad=True
+        held_shares = torch.tensor(0.0, requires_grad=True)
+        for i in range(len(input_series)):
+            self.reset()
+            outputs = self.forward(input_series, i)
+
+            for parameter_name, value in outputs.items():
+                if value > 0:
+                    if held_shares < 0:
+                        price = output_series.series_dictionary[parameter_name[2:]][i]
+                        val = val - (held_shares * price)
+                        held_shares = 0
+                    if parameter_name[0] == "B":
+                        if val > 0:
+                            if value > 1:
+                                value = value / value
                             money_to_purchase = value * val
                             price = output_series.series_dictionary[parameter_name[2:]][i]
                             bought = money_to_purchase / price
                             val = val - money_to_purchase
                             held_shares = held_shares + bought
 
-                        elif parameter_name[0] == "S":
-                            money_to_sell = value * val
-                            price = output_series.series_dictionary[parameter_name[2:]][i]
-                            sold = money_to_sell / price
-                            val = val + money_to_sell
-                            held_shares = held_shares - sold
+                    elif parameter_name[0] == "S":
+                        if value > 1:
+                            value = value / value
+                        money_to_sell = value * val
+                        price = output_series.series_dictionary[parameter_name[2:]][i]
+                        sold = money_to_sell / price
+                        val = val + money_to_sell
+                        held_shares = held_shares - sold
 
-            profit_func = val + held_shares * output_series.series_dictionary[parameter_name[2:]][len(input_series)-1]
-            if profit_func <= 0:
-                return math.inf
-            else:
-                loss =100/profit_func
+        profit_func = val + held_shares * output_series.series_dictionary[parameter_name[2:]][len(input_series) - 1]
+        if profit_func <= 1:
+            loss = -1 * profit_func + 100
+        else:
+            loss = 100 / profit_func
 
-            if iteration < iterations:
-                loss.backward()
-                optimizer.step()
-                optimizer.zero_grad()
-            else:
-                loss = float(loss)
-                logger.info(f"final fitness (loss): {loss}, type: {type(loss)}, gen:{self.generation_number}")
-                return loss
-
-        # unreachable
-        return math.inf
+        return loss
 
     @overrides(EXAStarGenome)
     def add_edge(self, edge: DTBaseEdge) -> None:
@@ -254,7 +385,6 @@ class DTGenome(EXAStarGenome[DTBaseEdge]):
             bisect.insort(self.output_nodes, node)
             self.inon_to_output_node[node.inon] = node
 
-
     def unnormalize_node(self, node: DTNode):
         """
         Denormalizes the weight passed to the Node
@@ -262,9 +392,9 @@ class DTGenome(EXAStarGenome[DTBaseEdge]):
             node: is the node to denormalize
         """
         if str(node.parameter_name[0]) in self.guide.keys():
-            m_m, min_val = self.guide[str(node.parameter_name[0])]
-            y = (node.input_edge.weight.item() + 1)/2
-            y = (y * m_m) + min_val
+            mean, std = self.guide[str(node.parameter_name[0])]
+            y = (node.input_edge.weight.item() * std) + mean
+
             return y
         return node.input_edge.weight.item()
 
@@ -275,9 +405,9 @@ class DTGenome(EXAStarGenome[DTBaseEdge]):
                 edge: is the edge to denormalize
         """
         if str(edge.input_node.parameter_name[0]) in self.guide.keys():
-            m_m, min_val = self.guide[str(edge.input_node.parameter_name[0])]
-            y = (edge.input_node.input_edge.weight.item() + 1)/2
-            y = (y * m_m) + min_val
+            mean, std = self.guide[str(edge.input_node.parameter_name[0])]
+            y = (edge.input_node.input_edge.weight.item() * std) + mean
+
             return y
         return edge.input_node.input_edge.weight.item()
 
@@ -288,8 +418,7 @@ class DTGenome(EXAStarGenome[DTBaseEdge]):
                 edge: is the edge to denormalize
         """
         if str(edge.output_node.parameter_name[0]) in self.guide.keys():
-            m_m, min_val = self.guide[str(edge.output_node.parameter_name[0])]
-            y = (edge.weight.item() + 1) / 2
-            y = (y * m_m) + min_val
+            mean, std = self.guide[str(edge.output_node.parameter_name[0])]
+            y = (edge.weight.item() * std) + mean
             return y
         return edge.weight.item()

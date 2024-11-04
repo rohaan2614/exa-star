@@ -50,16 +50,14 @@ class EXAStarDT(EXAStarTimeSeriesRegressionFitness[EXAStarGenome]):
         super().__init__()
 
     def compute(self, genome: EXAStarGenome, dataset: TimeSeries) -> MSEValue[EXAStarGenome]:
-        days = 15  # How many days
-        iter = 20  # How many times to improve
+        days = 10  # How many days
+        iter = 5  # How many times to improve
         value = MSEValue(
-            genome.train_genome(dataset, torch.optim.Adam(genome.parameters()), days, iter)
+            genome.train_genome(dataset, torch.optim.Adam(genome.parameters()), days, iter, False)
         )
         return value
 
 
 @configclass(name="base_exastar_dt", group="fitness", target=EXAStarDT)
 class EXAStarDTConfig(EXAStarFitnessConfig):
-    # days: int = field(default=10)
-    # iter: int = field(default=20)
     ...

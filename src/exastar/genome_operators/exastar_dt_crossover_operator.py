@@ -75,16 +75,15 @@ class EXAStarDTCrossoverOperator[G: EXAStarGenome](CrossoverOperator[G]):
 
     def __call__(self, parents: List[G], rng: np.random.Generator) -> Optional[G]:
         """
-        WORK IN PROGRESS, builds off of exastar_crossover_operator, but
-        fails due to some adjustments made for DT, will be updated later.
+        WORK IN PROGRESS, builds off of exastar_crossover_operator
+        Phases have been adjusted and out of order to adjust for descision trees, numbers set to match those
+        in original file
 
-        5-phase crossover that can combine any number of parent genomes.
+        3-phase crossover that can combine any number of parent genomes.
 
-        1. Start with a clone of the primary parent, `parents[0]`, and randomly disable some nodes by rolling against
-           `self.primary_parent_selection_p`.
         2. Select which nodes will be included from secondary parents i.e. `parents[1:]`
-        3. Add all edges from seconday parents which have both input and output nodes in the child genome.
-        4. Create new edges in the case of orphaned nodes. New weights will be generated using `self.weight_generator`
+        1. Start with a clone of the primary parent, `parents[0]`, and randomly disable some nodes by rolling against
+           `self.primary_parent_selection_p`. (ADDED PART) Replace selected node with selection from child.
         5. Perform Lamarckian weight crossover to determine weights on new genomes.
 
         This should yield a new genome with all nodes and edges from the primay parent (with some nodes disabled), some
@@ -137,13 +136,15 @@ class EXAStarDTCrossoverOperator[G: EXAStarGenome](CrossoverOperator[G]):
                 node_copy = deepcopy(node)
                 node_copy.enable()
 
-                child_genome.add_node(node_copy)
+                # child_genome.add_node(node_copy)
                 new_nodes.append(node_copy)
 
         if len(new_nodes) == 0:
+            with torch.no_grad():
+                self.weight_crossover(child_genome, grouped_nodes, grouped_edges, rng)
             return child_genome
-        # PHASE 1: retain all nodes and edges from primary parent, disabling some nodes randomly
 
+        # PHASE 1: retain all nodes and edges from primary parent, disabling some nodes randomly
 
         # For each node in the primary parent, include enabled nodes that pass a roll against
         # `self.primary_parent_selection_p`. For disabled nodes, roll for each instance of that node in other
@@ -154,26 +155,10 @@ class EXAStarDTCrossoverOperator[G: EXAStarGenome](CrossoverOperator[G]):
         for node in filter(is_not_any_instance({DTInputNode, DTOutputNode}), child_genome.nodes):
             if node.enabled:
                 isEnabled = self.roll(self.primary_parent_selection_p, rng)
-                if not isEnabled:
-                    replace_node = new_nodes[rng.integers(0, len(new_nodes))[0]]
-                    new_edges = self.swap_nodes(child_genome, node, replace_node, rng)
-            # else:
-            #     # We roll to see if the node should be enabled once for each secondary parent
-            #     # that has the node enabled.
-            #     n_rolls = sum(n.enabled for n in grouped_nodes[node.inon])
-            #
-            #     if n_rolls:
-            #         isEnabled = any(self.rolln(self.secondary_parent_selection_p, n_rolls, rng))
-            #         node.enabled = isEnabled
-            #         node.input_edge = isEnabled
-            #         node.left_output_edge = isEnabled
-            #         node.right_output_edge = isEnabled
-            #     else:
-            #         node.enabled = False
-            #         node.input_edge = False
-            #         node.left_output_edge = False
-            #         node.right_output_edge = False
-
+                if isEnabled:
+                    replace_node = rng.choice(new_nodes)
+                    if node.inon not in child_genome.inon_to_node:
+                        new_edges = self.swap_nodes(child_genome, node, replace_node, rng)
 
         # PHASE 5: Weight initialization of new components and Lamarckian weight crossover for copied components.
 
@@ -190,7 +175,7 @@ class EXAStarDTCrossoverOperator[G: EXAStarGenome](CrossoverOperator[G]):
 
 
     def disable_node(self, node):
-        node.enabled = False
+        node.disable()
         node.input_edge.disable()
         node.left_output_edge.disable()
         node.right_output_edge.disable()
@@ -199,11 +184,12 @@ class EXAStarDTCrossoverOperator[G: EXAStarGenome](CrossoverOperator[G]):
         self.disable_node(node1)
         old_in_edge = node1.input_edge
         node1_parent = node1.input_edge.input_node
-        node1_l_child = node1.input_edge.left_output_edge.output_node
-        node1_r_child = node1.input_edge.right_output_child.output_node
+        node1_l_child = node1.left_output_edge.output_node
+        node1_r_child = node1.right_output_edge.output_node
 
         if old_in_edge.isLeft:
             input_edge = self.edge_generator(genome, node1_parent, node2, True, rng)
+
         else:
             input_edge = self.edge_generator(genome, node1_parent, node2, False, rng)
         genome.add_edge(input_edge)
@@ -212,6 +198,12 @@ class EXAStarDTCrossoverOperator[G: EXAStarGenome](CrossoverOperator[G]):
         r_out_edge = self.edge_generator(genome, node2, node1_r_child, False, rng)
         genome.add_edge(l_out_edge)
         genome.add_edge(r_out_edge)
+
+        node2.add_input_edge(input_edge)
+        node2.add_left_edge(l_out_edge)
+        node2.add_right_edge(r_out_edge)
+        node2.depth = node1.depth
+        genome.add_node(node2)
 
         return input_edge, l_out_edge, r_out_edge
 
@@ -223,13 +215,13 @@ class EXAStarDTCrossoverOperator[G: EXAStarGenome](CrossoverOperator[G]):
         rng: np.random.Generator
     ) -> None:
         # TODO: We should probably move the torch.no_grad to the caller of crossover mutation
-        for node in genome.nodes:
-            nodes = grouped_nodes[node.inon]
-            if len(nodes) > 1:
-                print(list(node.parameters()))
-                print(len(list(node.parameters())))
-                print(len(list(list(n.parameters()) for n in nodes)))
-                self.component_crossover(node, list(node.parameters()), list(list(n.parameters()) for n in nodes), rng)
+        # for node in genome.nodes:
+        #     nodes = grouped_nodes[node.inon]
+        #     if len(nodes) > 1:
+        #         print(list(node.parameters()))
+        #         print(len(list(node.parameters())))
+        #         print(len(list(list(n.parameters()) for n in nodes)))
+        #         self.component_crossover(node, list(node.parameters()), list(list(n.parameters()) for n in nodes), rng)
 
         for edge in genome.edges:
             # Some edges are newly created and wont appear in the map
@@ -238,17 +230,29 @@ class EXAStarDTCrossoverOperator[G: EXAStarGenome](CrossoverOperator[G]):
 
             edges = grouped_edges[edge.inon]
             if len(edges) > 1:
-                print(len(list(edge.parameters())))
-                print(len(list(list(e.parameters()) for e in edges)))
-                self.component_crossover(edge, list(edge.parameters()), list(list(e.parameters()) for e in edges), rng)
+                # print(len(list(edge.parameters())))
+                # print(len(list(list(e.parameters()) for e in edges)))
+                self.component_crossover_dt(edge, edge.weight, list(e.weight for e in edges), rng)
+                # self.component_crossover(edge, list(edge.parameters()), list(list(e.parameters()) for e in edges), rng)
+
+    def component_crossover_dt(
+        self,
+        component: Component,
+        point: torch.Tensor,
+        neighbors: List[List[torch.Tensor]],
+        rng: np.random.Generator
+    ) -> None:
+        new_weight: torch.Tensor = self.line_search(point, torch.stack(neighbors), rng)
+        component.weight.data = new_weight
 
     def component_crossover(
         self,
         component: Component,
         points: List[torch.Tensor],
-        neighbors: List[List[torch.Tensor]],
+        neighbors: List[torch.Tensor],
         rng: np.random.Generator
     ) -> None:
+
         new_weights: List[torch.Tensor] = [
             self.line_search(points[iw], torch.stack([neighbor[iw] for neighbor in neighbors]), rng)
             for iw in range(len(points))

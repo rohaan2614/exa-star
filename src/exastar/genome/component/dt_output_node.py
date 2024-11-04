@@ -2,7 +2,7 @@ from typing import Optional
 
 from exastar.genome.component.output_node import OutputNode
 from exastar.genome.component.dt_node import DTNode, node_inon_t
-from exastar.genome.component.dt_set_edge import DTBaseEdge, edge_inon_t
+from exastar.genome.component.edge import Edge, edge_inon_t
 from util.typing import overrides, ComparableMixin
 
 from typing import List, Optional, TYPE_CHECKING, Tuple
@@ -29,7 +29,7 @@ class DTOutputNode(OutputNode):
             See `exastar.genome.component.Component` for details on `enabled`, `active`, and `weights_initialized`.
         """
         super().__init__(node_name, depth, 0, inon, enabled, active, weights_initialized)
-        self.input_edge: DTBaseEdge = None
+        self.input_edge: Edge = None
         self.node_name: str = node_name
 
     @overrides(OutputNode)
@@ -45,7 +45,7 @@ class DTOutputNode(OutputNode):
         return torch.zeros(1)
 
     @overrides(OutputNode)
-    def add_input_edge(self, edge: DTBaseEdge):
+    def add_input_edge(self, edge: Edge):
         """
         Adds an input edge to this node.
 

@@ -83,7 +83,7 @@ class RecurrentGenome(EXAStarGenome[Edge]):
         for input_node, output_node in product(input_nodes, output_nodes):
             edge = RecurrentEdge(input_node, output_node, max_sequence_length, 0)
 
-            if input_node.parameter_name == output_node.parameter_name:
+            if input_node.node_name == output_node.node_name:
                 # set the weight to 1 as a default (use the previous value as the forecast)
                 edge.weight[0] = 1.0
             else:
@@ -184,7 +184,7 @@ class RecurrentGenome(EXAStarGenome[Edge]):
 
         for time_step in range(input_series.series_length):
             for input_node in self.input_nodes:
-                x = input_series.series_dictionary[input_node.parameter_name][time_step]
+                x = input_series.series_dictionary[input_node.node_name][time_step]
                 input_node.accumulate(time_step=time_step, value=x)
 
             for node in self.nodes:
@@ -192,7 +192,7 @@ class RecurrentGenome(EXAStarGenome[Edge]):
 
         outputs = {}
         for output_node in self.output_nodes:
-            outputs[output_node.parameter_name] = output_node.value
+            outputs[output_node.node_name] = output_node.value
 
         return outputs
 

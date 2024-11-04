@@ -94,9 +94,10 @@ class DTNode(Node):
         """
         assert edge.input_node.inon == self.inon
         assert not edge.inon == self.left_output_edge
-        super().add_output_edge(edge)
+
         if self.right_output_edge:
             self.remove_output_edge(self.right_output_edge)
+        super().add_output_edge(edge)
         self.right_output_edge = edge
 
     def add_left_edge(self, edge: DTBaseEdge):
@@ -109,12 +110,19 @@ class DTNode(Node):
 
         assert edge.input_node.inon == self.inon
         assert not edge.inon == self.right_output_edge
-        super().add_output_edge(edge)
+
         if self.left_output_edge:
             self.remove_output_edge(self.left_output_edge)
+        super().add_output_edge(edge)
         self.left_output_edge = edge
 
     def remove_output_edge(self, edge: DTBaseEdge):
+        """
+            removes an output edge to this node.
+
+            Args:
+                edge: output edge to be removed.
+        """
         for e in self.output_edges:
             if e.inon == edge.inon:
                 self.output_edges.remove(edge)
@@ -127,6 +135,7 @@ class DTNode(Node):
     @overrides(Node)
     def __getstate__(self):
         """
+        DOES NOT DO BELOW, FUTURE TODO
         Overrides the default implementation of object.__getstate__ because we are unable to pickle
         large networks if we include input and outptut edges. Instead, we will rely on the construction of
         new edges to add the appropriate input and output edges. See exastar.genome.component.Edge.__setstate__
@@ -139,12 +148,12 @@ class DTNode(Node):
         """
         state: dict = dict(self.__dict__)
 
-        state["input_edge"] = []
-        state["right_output_edge"] = []
-        state["left_output_edge"] = []
-        state["input_edges"] = []
-        state["output_edges"] = []
-        state["value"] = []
+        # state["input_edge"] = []
+        # state["right_output_edge"] = []
+        # state["left_output_edge"] = []
+        # state["input_edges"] = []
+        # state["output_edges"] = []
+        # state["value"] = []
 
         return state
 

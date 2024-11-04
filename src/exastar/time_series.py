@@ -124,10 +124,14 @@ class TimeSeries(Dataset):
         guide = {}
         for feature_name in df.columns:
             if feature_name in norm_list:
-                max_value = df[feature_name].max()
-                min_value = df[feature_name].min()
-                result[feature_name] = (2*((df[feature_name] - min_value) / (max_value - min_value)))-1
-                guide[feature_name] = (max_value-min_value, min_value)
+                mean = df[feature_name].mean()
+                std = df[feature_name].std()
+                result[feature_name] = (df[feature_name] - mean) / std
+                guide[feature_name] = (mean, std)
+                # max_value = df[feature_name].max()
+                # min_value = df[feature_name].min()
+                # result[feature_name] = (2*((df[feature_name] - min_value) / (max_value - min_value)))-1
+                # guide[feature_name] = (max_value-min_value, min_value)
         return result, guide
 
 

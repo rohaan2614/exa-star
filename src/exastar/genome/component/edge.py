@@ -87,8 +87,7 @@ class Edge(ComparableMixin, Component):
         effectively flattens the pickled representation.
         """
         super().__setstate__(state)
-        self.input_node = state["input_node"]
-        self._connect()
+        # self._connect()
 
     def __getstate__(self):
         """

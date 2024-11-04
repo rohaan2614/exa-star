@@ -13,6 +13,7 @@ import torch
 from exastar.genome.component.component import Component
 from exastar.genome.component.dt_set_edge import DTBaseEdge
 from exastar.genome.visitor import WeightDistributionVisitor
+from exastar.genome.visitor import WeightDistributionVisitorDT
 
 
 @dataclass
@@ -147,7 +148,7 @@ class LamarckianWeightGenerator[G: EXAStarGenome](WeightGenerator[G]):
 
     def __call__(self, genome: G, rng: np.random.Generator, targets: Optional[List[Component]] = None) -> None:
         """
-        Iterates through all weights of the given genome and sets their values using Lamarckian weight initialization.
+        Iterates through all weights of the given genome and sets their values using  .
         Edge and node weights will be set to a random normal distribution with a mean of 0 and a standard deviation of
         `1 / sqrt(N)` where `N` is the fan in to the node.
 
@@ -155,8 +156,7 @@ class LamarckianWeightGenerator[G: EXAStarGenome](WeightGenerator[G]):
             genome: The genome to set weights for
             kwargs: This generator will not use any other arguments
         """
-        self._mean, self._std = WeightDistributionVisitor(genome).visit()
-
+        self._mean, self._std = WeightDistributionVisitorDT(genome).visit()
         super().__call__(genome, rng, targets)
 
     def generate(self, parameter: torch.nn.Parameter, fan_in: int, fan_out: int, rng: np.random.Generator) -> None:

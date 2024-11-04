@@ -46,3 +46,41 @@ class WeightDistributionVisitor[G: EXAStarGenome](Visitor[G, Tuple[float, float]
             self.parameters.append(parameter)
             self.weight_sum += float(parameter.sum())
             self.weight_count += parameter.numel()
+
+
+class WeightDistributionVisitorDT[G: EXAStarGenome](Visitor[G, Tuple[float, float]]):
+    """
+    Computes the mean and standard deviation of the parameters of enabled components in the supplied genome.
+    """
+
+    def __init__(self, genome: G) -> None:
+        super().__init__(genome)
+        self.weight_sum: float = 0.0
+        self.weight_count: int = 0
+        self.parameters: List[torch.nn.Parameter] = []
+
+    def visit(self) -> Tuple[float, float]:
+        # We could directly call genome.parameters but we want to ignore disabled components.
+        for component in itertools.chain(self.genome.edges):
+            self.visit_component(component)
+
+        if self.weight_count == 0:
+            return 0, 1
+
+        mean: float = self.weight_sum / self.weight_count
+
+        stdsum: float = 0.0
+        for parameter in self.parameters:
+            stdsum += float(torch.square(mean - parameter).sum())
+
+        std: float = math.sqrt(stdsum / self.weight_count)
+
+        return 0, std
+
+    def visit_component(self, component: Component) -> None:
+        # Ignore disabled components.
+        if not component.weights_initialized() or component.is_disabled():
+            return
+        self.parameters.append(component.weight)
+        self.weight_sum += float(component.weight.item())
+        self.weight_count += 1

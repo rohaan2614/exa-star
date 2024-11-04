@@ -2,8 +2,10 @@ from typing import Optional, cast
 
 from exastar.genome.component.edge import Edge, edge_inon_t
 from exastar.genome.component.dt_node import DTNode
+from exastar.genome.component.dt_output_node import DTOutputNode
 from util.typing import ComparableMixin, overrides
-
+import copy
+from typing import cast, Dict, Optional, Tuple
 from loguru import logger
 import torch
 
@@ -48,6 +50,24 @@ class DTBaseEdge(Edge):
 
         super().__setstate__(state)
 
+    @overrides(Edge)
+    def __deepcopy__(self, memo):
+        """
+        Same story as __setstate__: deepcopy of recurrent objects causes stack overflow issues, so edges
+        will add themselves to nodes when copied (nodes will in turn copy no edges, relying on this).
+        """
+        cls = self.__class__
+        clone = cls.__new__(cls)
+
+        memo[id(self)] = clone
+
+        state = cast(Dict, self.__getstate__())
+        for k, v in state.items():
+            setattr(clone, k, copy.deepcopy(v, memo))
+
+        # clone._connect()
+
+        return clone
 
     @overrides(Edge)
     def __getstate__(self):
@@ -103,13 +123,16 @@ class DTBaseEdge(Edge):
     def forward(self, value: torch.Tensor):
         """
         Propagates the input nodes value forward to the output node.
+        Only does so if input node approves, as an output it can only be positive
 
         Args:
-            time_step: the time step the value is being fed from.
-            value: the output value of the input node.
+            value: the output value of the input nodem.
         """
-        assert self.is_active()
 
+        if isinstance(self.output_node, DTOutputNode):
+            if self.weight < 0:
+                self.weight = torch.nn.Parameter(self.weight * -1)
+        assert self.is_active()
         output_value = value * self.weight
         self.output_node.input_fired(
             value=output_value

@@ -11,7 +11,8 @@ from exastar.genome_operators.split_edge import *
 from exastar.genome_operators.split_node import *
 from exastar.genome_operators.toggle_component import *
 
+from exastar.genome_operators.change_edge_dt import *
+from exastar.genome_operators.change_node_dt import *
 from exastar.genome_operators.split_edge_dt import *
-from exastar.genome_operators.split_edge_dt_new import *
 from exastar.genome_operators.merge_node_dt import *
 from exastar.genome_operators.exastar_dt_crossover_operator import *
