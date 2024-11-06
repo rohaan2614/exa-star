@@ -5,7 +5,6 @@ from config import configclass
 from dataset import Dataset
 from genome import Genome, GenomeFactory
 from population.population import Population, PopulationConfig
-from population.visualization.family_tree_tracker import FamilyTreeTracker
 
 from loguru import logger
 import numpy as np
@@ -17,7 +16,7 @@ class SimplePopulation[G: Genome, D: Dataset](Population[G, D]):
     generation, `self.size - self.n_elites` new tasks are created. After evaluation, all but the `self.n_elites` best
     genomes are discarded and the newly evaluated genomes are placed in the generation.
 
-    Note that the semantics of fitness are important to understand the code here. Read the documnetation of
+    Note that the semantics of fitness are important to understand the code here. Read the documentation of
     `genome.Fitness` for details.
     """
 
@@ -33,7 +32,6 @@ class SimplePopulation[G: Genome, D: Dataset](Population[G, D]):
         # Genomes should be sorted by fitness
         self.genomes: List[G] = []
 
-        self.family_tree_tracker = FamilyTreeTracker()
 
     def initialize(self, genome_factory: GenomeFactory[G, D], dataset: D, rng: np.random.Generator) -> None:
         seed = genome_factory.get_seed_genome(dataset, rng)

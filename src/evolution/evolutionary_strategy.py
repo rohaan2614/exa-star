@@ -13,6 +13,8 @@ import numpy as np
 from pandas import DataFrame
 from pandas._typing import Axes
 
+from population.visualization.family_tree_tracker import FamilyTreeTracker, FamilyTreeTrackerConfig
+
 
 class EvolutionaryStrategy[G: Genome, D: Dataset](ABC, LogDataAggregator):
     """
@@ -45,6 +47,7 @@ class EvolutionaryStrategy[G: Genome, D: Dataset](ABC, LogDataAggregator):
         dataset: D,
         nsteps: int,
         providers: Dict[str, LogDataProvider[Self]],
+        family_tree_tracker: FamilyTreeTracker[G]
     ) -> None:
         LogDataAggregator.__init__(self, providers)
 
@@ -52,6 +55,7 @@ class EvolutionaryStrategy[G: Genome, D: Dataset](ABC, LogDataAggregator):
 
         self.output_directory: str = output_directory
         self.population: Population = population
+        self.population.family_tree_tracker = family_tree_tracker
         self.genome_factory: GenomeFactory = genome_factory
         self.fitness: Fitness[G, D] = fitness
         self.dataset: D = dataset
@@ -123,3 +127,4 @@ class EvolutionaryStrategyConfig(LogDataAggregatorConfig):
     fitness: FitnessConfig
     dataset: DatasetConfig
     nsteps: int = field(default=10000)
+    family_tree_tracker: FamilyTreeTrackerConfig

@@ -25,6 +25,7 @@ _config_groups = {
     "evolutionary_strategy/init_task",
     "fitness",
     "dataset",
+    "family_tree_tracker",
     "init_tasks"
 }
 
