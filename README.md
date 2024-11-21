@@ -59,7 +59,7 @@ Experiments in Hydra are defined in `.yaml` files - these can be modular or all 
 For a deeper understanding of how Hydra works, refer to `HYDRA.md`.
 
 # Running
-You need a new-ish version of python - at least enough to support `match` meaning >= 3.10.
+We need Python version 3.12 or newer because the code relies on features introduced in Python 3.12, such as the new class type parameter syntax.
 
 Install depdendencies (you should probably do this in a virtual environment):
 ```
